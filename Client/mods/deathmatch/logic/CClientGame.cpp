@@ -5900,7 +5900,7 @@ void CClientGame::InitVoice(bool bEnabled, unsigned int uiServerSampleRate, unsi
 {
     if (m_pVoiceRecorder)
     {
-        m_pVoiceRecorder->Init(bEnabled, uiServerSampleRate, ucQuality, uiBitrate);
+        //m_pVoiceRecorder->Init(bEnabled, uiServerSampleRate, ucQuality, uiBitrate);
     }
 }
 
@@ -6233,11 +6233,11 @@ void CClientGame::OutputServerInfo()
 
     {
         SString strVoice;
-        if (m_pVoiceRecorder && m_pVoiceRecorder->IsEnabled())
+        /*if (m_pVoiceRecorder && m_pVoiceRecorder->IsEnabled())
             strVoice += SString("Enabled - Sample rate:%d  Quality:%d", m_pVoiceRecorder->GetSampleRate(), m_pVoiceRecorder->GetSampleQuality());
         else
             strVoice += "Disabled";
-
+            */
         strTotalOutput += SString("Voice: %s\n", *strVoice);
     }
 
