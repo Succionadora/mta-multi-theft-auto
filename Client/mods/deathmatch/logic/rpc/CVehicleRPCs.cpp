@@ -332,7 +332,15 @@ void CVehicleRPCs::SetVehicleDamageState(CClientEntity* pSource, NetBitStreamInt
                     unsigned char ucWheel, ucState;
                     if (bitStream.Read(ucWheel) && bitStream.Read(ucState))
                     {
-                        pVehicle->SetWheelStatus(ucWheel, ucState, false);
+                        bool spawnFlyingComponent = false;
+
+                        if (bitStream.Can(eBitStreamVersion::setVehicleWheelStates_SpawnFlyingComponent))
+                        {
+                            if (!bitStream.ReadBit(spawnFlyingComponent))
+                                break;
+                        }
+
+                        pVehicle->SetWheelStatus(ucWheel, ucState, false, spawnFlyingComponent);
                     }
                     break;
                 }
@@ -441,14 +449,20 @@ void CVehicleRPCs::SetVehicleFuelTankExplodable(CClientEntity* pSource, NetBitSt
 void CVehicleRPCs::SetVehicleWheelStates(CClientEntity* pSource, NetBitStreamInterface& bitStream)
 {
     unsigned char ucWheelStates[MAX_WHEELS];
-    if (bitStream.Read((char*)ucWheelStates, MAX_WHEELS))
+    bool          spawnFlyingComponent = false;
+
+    if (!bitStream.Read((char*)ucWheelStates, MAX_WHEELS))
+        return;
+
+    if (bitStream.Can(eBitStreamVersion::setVehicleWheelStates_SpawnFlyingComponent))
+        if (!bitStream.ReadBit(spawnFlyingComponent))
+            return;
+
+    CClientVehicle* pVehicle = m_pVehicleManager->Get(pSource->GetID());
+    if (pVehicle)
     {
-        CClientVehicle* pVehicle = m_pVehicleManager->Get(pSource->GetID());
-        if (pVehicle)
-        {
-            for (int i = 0; i < MAX_WHEELS; i++)
-                pVehicle->SetWheelStatus(i, ucWheelStates[i], false);
-        }
+        for (int i = 0; i < MAX_WHEELS; i++)
+            pVehicle->SetWheelStatus(i, ucWheelStates[i], false, spawnFlyingComponent);
     }
 }
 
