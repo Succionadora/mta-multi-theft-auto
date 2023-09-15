@@ -887,12 +887,16 @@ bool CMainMenu::OnQuickConnectButtonClick(CGUIElement* pElement, bool left)
     {
         std::string command;
         CVARS_GET("_beta_qc_rightclick_command", command);
-        g_pCore->GetCommands()->Execute(command.data());
-        return true;
+        if (!command.empty())
+        {
+            g_pCore->GetCommands()->Execute(command.data());
+            return true;
+        }
+        return false;
     }
 
-    m_ServerBrowser.SetVisible(true);
-    m_ServerBrowser.OnQuickConnectButtonClick();
+    CCommands::GetSingleton().Execute("reconnect", "");
+
     return true;
 }
 
