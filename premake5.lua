@@ -146,6 +146,7 @@ workspace "MTASA"
 		include "Client/loader"
 		include "Client/loader-proxy"
 		include "Client/multiplayer_sa"
+		include "Client/effekseer"
 		include "Client/mods/deathmatch"
 
 		group "Client/CEGUI"
@@ -166,6 +167,7 @@ workspace "MTASA"
 		include "vendor/libspeex"
 		include "vendor/detours"
 		include "vendor/lunasvg"
+		include "vendor/effekseer"
 	end
 
 	filter {}
