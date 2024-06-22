@@ -21,6 +21,7 @@
 #include "CConsoleCommands.h"
 #include "CHTTPD.h"
 #include "CStaticFunctionDefinitions.h"
+#include <SharedUtil.Misc.h>
 
 #define MTA_SERVER_CONF_TEMPLATE "mtaserver.conf.template"
 
@@ -65,7 +66,7 @@ CMainConfig::CMainConfig(CConsole* pConsole) : CXMLConfig(NULL)
     m_iEnableClientChecks = -1;
     m_bJoinFloodProtectionEnabled = true;
     m_bScriptDebugLogEnabled = false;
-    m_uiScriptDebugLogLevel = 0;
+    m_scriptDebugLogLevelMap = {};
     m_bDontBroadcastLan = false;
     m_usFPSLimit = 36;
     m_uiVoiceSampleRate = 1;
@@ -337,6 +338,23 @@ bool CMainConfig::Load()
     }
 
     {
+        SString strDebugLevel;
+        GetString(m_pRootNode, "scriptdebugloglevel", strDebugLevel);
+
+        std::vector<SString> debugLevelList;
+        ReadCommaSeparatedList(strDebugLevel, debugLevelList);
+        for (const auto& level : debugLevelList)
+        {
+            auto levelNum = SharedUtil::StringToNumber<int>(level);
+
+            if(!levelNum.has_value())
+                continue;
+
+            MapInsert(m_scriptDebugLogLevelSet, levelNum.value());
+        }
+    }
+
+    {
         SString strEnable;
         GetString(m_pRootNode, "enable_diagnostic", strEnable);
         std::vector<SString> tagList;
@@ -605,22 +623,6 @@ bool CMainConfig::LoadExtended()
     else
     {
         m_bScriptDebugLogEnabled = false;
-    }
-
-    // Grab the script debuglog level
-    iResult = GetInteger(m_pRootNode, "scriptdebugloglevel", iTemp, 0, 3);
-    if (iResult == IS_SUCCESS)
-    {
-        m_uiScriptDebugLogLevel = iTemp;
-    }
-    else
-    {
-        if (iResult == INVALID_VALUE)
-        {
-            CLogger::LogPrint("WARNING: Invalid value specified in \"scriptdebugloglevel\" tag; defaulting to 0\n");
-        }
-
-        m_uiScriptDebugLogLevel = 0;
     }
 
     iResult = GetInteger(m_pRootNode, "htmldebuglevel", iTemp, 0, 3);
@@ -1393,6 +1395,56 @@ bool CMainConfig::SetSetting(const SString& strName, const SString& strValue, bo
             }
             return true;
         }
+    }
+    else if (strName == "scriptdebugloglevel")
+    {
+        SString strCurDebugLevel;
+        GetSetting("scriptdebugloglevel", strCurDebugLevel);
+        std::vector<SString> curDebugLevelList;
+        ReadCommaSeparatedList(strCurDebugLevel, curDebugLevelList);
+
+        // Get new setting as as list of ids
+        std::vector<SString> newDebugLevelList;
+        ReadCommaSeparatedList(strValue, newDebugLevelList);
+
+        // Merge
+        std::set<std::uint32_t> comboDebugLevelMap;
+        for (const auto& combo : curDebugLevelList) {
+            if(combo.empty())
+                continue;
+            try{
+                auto level = std::stoi(combo);
+                MapInsert(comboDebugLevelMap, level);
+            }catch(...) {}
+        }
+        for (const auto& combo : newDebugLevelList) {
+            if(combo.empty())
+                continue;
+            try{
+                auto level = std::stoi(combo);
+                MapInsert(comboDebugLevelMap, level);
+            }catch(...) {}
+        }
+
+        // Make a string
+        SString strComboResult;
+        for (const auto& uiId : comboDebugLevelMap)
+        {
+            if (!uiId)
+                continue;
+            if (uiId > 4)
+                continue;
+
+            if (!strComboResult.empty())
+                strComboResult += ",";
+
+            strComboResult += SString("%d", uiId);
+        }
+
+        // Save new setting
+        SetString(m_pRootNode, "scriptdebugloglevel", strComboResult);
+        Save();
+        return true;
     }
 
     // Check settings in this list here
