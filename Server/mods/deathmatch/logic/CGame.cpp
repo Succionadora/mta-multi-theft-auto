@@ -1216,6 +1216,12 @@ bool CGame::ProcessPacket(CPacket& Packet)
             return true;
         }
 
+        case PACKET_ID_HEALTH_UPDATE:
+        {
+            Packet_changeHealth(static_cast<CHealthPacket&>(Packet));
+            return true;
+        }
+
         case PACKET_ID_VOICE_DATA:
         {
             Packet_Voice_Data(static_cast<CVoiceDataPacket&>(Packet));
@@ -1616,6 +1622,7 @@ void CGame::AddBuiltInEvents()
     m_Events.AddEvent("onElementModelChange", "oldModel, newModel", NULL, false);
     m_Events.AddEvent("onElementDimensionChange", "oldDimension, newDimension", nullptr, false);
     m_Events.AddEvent("onElementInteriorChange", "oldInterior, newInterior", nullptr, false);
+    m_Events.AddEvent("onElementHealthChange", "oldHealth, newHealth", NULL, false);
 
     // Radar area events
 
@@ -2648,6 +2655,24 @@ void CGame::Packet_CustomData(CCustomDataPacket& Packet)
         }
     }
 }
+
+
+void CGame::Packet_changeHealth(CHealthPacket& Packet)
+{
+    CPlayer* pSourcePlayer = Packet.GetSourcePlayer();
+    if (pSourcePlayer)
+    {
+        ElementID elementID = Packet.GetElementID();
+        float newHealth = Packet.GetNewHealth();
+
+        CElement* pElement = CElementIDs::GetElement(elementID);
+        if (pElement)
+        {
+            CStaticFunctionDefinitions::SetElementHealth(pElement, newHealth, pSourcePlayer);
+        }
+    }
+}
+
 
 void CGame::Packet_DetonateSatchels(CDetonateSatchelsPacket& Packet)
 {
