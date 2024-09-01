@@ -13,6 +13,7 @@
 #include <game/CHandlingEntry.h>
 #include <game/CHandlingManager.h>
 #include "lua/CLuaFunctionParser.h"
+#include "../../../../game_sa/CHudSA.h"
 
 void CLuaVehicleDefs::LoadFunctions()
 {
@@ -155,6 +156,8 @@ void CLuaVehicleDefs::LoadFunctions()
         {"setVehicleVariant", ArgumentParser<SetVehicleVariant>},
         {"setVehicleWheelScale", ArgumentParser<SetVehicleWheelScale>},
         {"setVehicleModelWheelSize", ArgumentParser<SetVehicleModelWheelSize>},
+
+        {"setVehicleName", ArgumentParser<SetVehicleName>},
     };
 
     // Add functions
@@ -4232,6 +4235,23 @@ bool CLuaVehicleDefs::ResetVehicleDummyPositions(CClientVehicle* vehicle)
 bool CLuaVehicleDefs::BlowVehicle(CClientEntity* entity, std::optional<bool> withExplosion)
 {
     return CStaticFunctionDefinitions::BlowVehicle(*entity, withExplosion);
+}
+
+bool CLuaVehicleDefs::SetVehicleName(std::variant<CClientVehicle* const, std::uint16_t> vehicle, std::string name) noexcept
+{
+    if (std::holds_alternative<std::uint16_t>(vehicle))
+    {
+        return g_pGame->SetVehicleName(std::get<std::uint16_t>(vehicle), name);
+    }
+    else
+    {
+        return std::get<CClientVehicle* const>(vehicle)->SetName(name);
+    }
+}
+
+std::string CLuaVehicleDefs::GetVehName(CClientVehicle* const veh) noexcept
+{
+    return veh->GetName();
 }
 
 std::variant<bool, std::array<std::array<float, 3>, 4>> CLuaVehicleDefs::GetVehicleEntryPoints(CClientVehicle* vehicle)

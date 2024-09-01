@@ -396,6 +396,10 @@ public:
     const char* GetRegPlate() { return m_strRegPlate.empty() ? NULL : m_strRegPlate.c_str(); }
     bool        SetRegPlate(const char* szPlate);
 
+    std::string GetName() const noexcept;
+    bool        SetName(const std::string& name) noexcept;
+    bool        SetName(const std::uint16_t& id, const std::string& name) noexcept;
+
     unsigned char GetPaintjob();
     void          SetPaintjob(unsigned char ucPaintjob);
 

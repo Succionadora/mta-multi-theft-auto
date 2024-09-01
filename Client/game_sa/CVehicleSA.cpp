@@ -10,6 +10,7 @@
  *****************************************************************************/
 
 #include "StdInc.h"
+#include "gamesa_renderware.h"
 #include "CAutomobileSA.h"
 #include "CBikeSA.h"
 #include "CCameraSA.h"
@@ -23,7 +24,8 @@
 #include "CVehicleSA.h"
 #include "CVisibilityPluginsSA.h"
 #include "CWorldSA.h"
-#include "gamesa_renderware.h"
+#include "CPlayerInfoSA.h"
+#include "CTextSA.h"
 
 extern CGameSA* pGame;
 
@@ -49,6 +51,62 @@ void _declspec(naked) HOOK_Vehicle_PreRender(void)
         push 6ABD04h
         retn
     }
+}
+
+void CVehicleSA::HOOK_CCurrentVehicle__Process()
+{
+    static auto currentVehicle = reinterpret_cast<CCurrentVehicleSAInterface*>(VAR_CUserDisplay_CurrentVehicle);
+    static auto TheText = reinterpret_cast<CTextSAInterface*>(VAR_TheText);
+    static auto ModelInfoPtr = reinterpret_cast<CVehicleModelInfoSAInterface**>(VAR_ModelInfoPtrs);
+
+    using CHud__SetVehicleName_t = void(__cdecl*)(const char*);
+    using CCurrentVehicle__Display_t = void(__thiscall*)(CCurrentVehicleSAInterface*);
+    using CText__Get_t = char*(__thiscall*)(CTextSAInterface*, const char*);
+
+    static const auto CHud__SetVehicleName = reinterpret_cast<CHud__SetVehicleName_t>(FUNC_CHud_SetVehicleName);
+    static const auto CCurrentVehicle__Display = reinterpret_cast<CCurrentVehicle__Display_t>(FUNC_CCurrentVehicle_Display);
+    static const auto CText__Get = reinterpret_cast<CText__Get_t>(FUNC_CText_Get);
+
+    std::uint8_t            CWorld__PlayerInFocus = *(std::uint8_t*)VAR_CWorld_PlayerInFocus;
+    CPlayerInfoSAInterface* CWorld__Players = (CPlayerInfoSAInterface*)VAR_CWorld_Players;
+    CPlayerPedSAInterface*  playerPed = CWorld__Players[CWorld__PlayerInFocus].pPed;
+
+    currentVehicle->m_pCurrentVehicle = playerPed->pVehicle;
+    if (!playerPed->pedFlags.bInVehicle)
+    {
+        currentVehicle->m_pCurrentVehicle = nullptr; 
+        CHud__SetVehicleName("");
+        CCurrentVehicle__Display(currentVehicle);
+        return;
+    }
+    auto modelIndex = playerPed->pVehicle->m_nModelIndex;
+
+    const auto& vehicleRefNames = CGameSA::GetVehicleRefNames();
+    auto&       vehicleIDNames = CGameSA::GetVehicleIDNames();
+    const auto& originalVehNames = CGameSA::GetOriginalVehicleNames();
+
+    if (SharedUtil::MapContains(vehicleRefNames, this))
+    {
+        CHud__SetVehicleName(vehicleRefNames.at(this).c_str());
+        return;
+    }
+
+    if (SharedUtil::MapContains(vehicleIDNames, modelIndex))
+    {
+        CHud__SetVehicleName(vehicleIDNames.at(modelIndex).c_str());
+        return;
+    }
+
+    if (SharedUtil::MapContains(originalVehNames, modelIndex))
+    {
+        CHud__SetVehicleName(originalVehNames.at(modelIndex).c_str());
+        return;
+    }
+
+    vehicleIDNames[modelIndex] = CText__Get(TheText, ModelInfoPtr[modelIndex]->gameName);
+
+    CHud__SetVehicleName(vehicleIDNames[modelIndex].c_str());
+    CCurrentVehicle__Display(currentVehicle);
 }
 
 namespace
@@ -1763,6 +1821,9 @@ void CVehicleSA::StaticSetHooks()
 {
     // Setup vehicle sun glare hook
     HookInstall(FUNC_CAutomobile_OnVehiclePreRender, (DWORD)HOOK_Vehicle_PreRender, 5);
+
+    // Setup vehicle names
+    HookInstall(FUNC_CCurrentVehicle_Process, &CVehicleSA::HOOK_CCurrentVehicle__Process, 5);
 }
 
 void CVehicleSA::SetVehiclesSunGlareEnabled(bool bEnabled)
@@ -2267,4 +2328,35 @@ bool CVehicleSA::SetWindowOpenFlagState(unsigned char ucWindow, bool bState)
         mov     bReturn, al
     }
     return bReturn;
+}
+
+std::string CVehicleSA::GetVehicleName() const noexcept
+{
+    const auto& vehicleRefNames = CGameSA::GetVehicleRefNames();
+    const auto& vehicleIDNames = CGameSA::GetVehicleIDNames();
+    const auto& originalVehNames = CGameSA::GetOriginalVehicleNames();
+
+    if (SharedUtil::MapContains(vehicleRefNames, this))
+        return vehicleRefNames.at(this);
+
+    auto index = GetModelIndex();
+    if (SharedUtil::MapContains(vehicleIDNames, index))
+        return vehicleIDNames.at(index);
+
+    if (SharedUtil::MapContains(originalVehNames, index))
+        return originalVehNames.at(index);
+
+    return "";
+}
+
+bool CVehicleSA::SetVehicleName(const std::string& name) noexcept
+{
+    if (name.size() > 63)
+        return false;
+
+    auto& vehicleRefNames = CGameSA::GetVehicleRefNames();
+
+    vehicleRefNames[this] = name;
+
+    return true;
 }
