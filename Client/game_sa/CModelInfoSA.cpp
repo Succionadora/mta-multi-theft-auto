@@ -442,6 +442,8 @@ void CModelInfoSA::Remove()
 
 bool CModelInfoSA::UnloadUnused()
 {
+    m_pInterface = ppModelInfo[m_dwModelID];
+
     if (m_pInterface->usNumberOfRefs == 0 && !m_pCustomClump && !m_pCustomColModel)
     {
         pGame->GetStreaming()->RemoveModel(m_dwModelID);
@@ -743,7 +745,7 @@ CBoundingBox* CModelInfoSA::GetBoundingBox()
 bool CModelInfoSA::IsValid()
 {
     if (m_dwModelID >= MODELINFO_DFF_MAX && m_dwModelID < MODELINFO_TXD_MAX)
-        return !pGame->GetPools()->IsFreeTextureDictonarySlot(m_dwModelID - MODELINFO_DFF_MAX);
+        return !pGame->GetPools()->GetTxdPool().IsFreeTextureDictonarySlot(m_dwModelID - MODELINFO_DFF_MAX);
         
     if (m_dwModelID >= pGame->GetBaseIDforTXD() && m_dwModelID < pGame->GetCountOfAllFileIDs())
         return true;
@@ -1075,11 +1077,6 @@ void CModelInfoSA::ModelAddRef(EModelRequestType requestType, const char* szTag)
     }
 
     m_dwReferences++;
-}
-
-int CModelInfoSA::GetRefCount()
-{
-    return static_cast<int>(m_dwReferences);
 }
 
 void CModelInfoSA::RemoveRef(bool bRemoveExtraGTARef)
