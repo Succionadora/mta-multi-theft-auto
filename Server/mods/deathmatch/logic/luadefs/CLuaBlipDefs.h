@@ -11,6 +11,7 @@
 
 #pragma once
 #include "CLuaDefs.h"
+#include <lua/CLuaMultiReturn.h>
 
 class CLuaBlipDefs : public CLuaDefs
 {
@@ -18,21 +19,21 @@ public:
     static void LoadFunctions();
     static void AddClass(lua_State* luaVM);
 
-    // Blip create/destroy functions
-    LUA_DECLARE(CreateBlip);
-    LUA_DECLARE(CreateBlipAttachedTo);
+    // Create functions
+    static std::variant<CBlip*, bool> CreateBlip(lua_State* const luaVM, const CVector vecPosition, const std::optional<std::uint8_t> icon, std::optional<std::uint8_t> size, const std::optional<std::uint8_t> r, const std::optional<std::uint8_t> g, const std::optional<std::uint8_t> b, const std::optional<std::uint8_t> a, const std::optional<std::int16_t> ordering, const std::optional<std::uint16_t> visibleDistance, const std::optional<CElement*> visibleTo);
+    static std::variant<CBlip*, bool> CreateBlipAttachedTo(lua_State* const luaVM, CElement* const entity, const std::optional<std::uint8_t> icon, std::optional<std::uint8_t> size, const std::optional<std::uint8_t> r, const std::optional<std::uint8_t> g, const std::optional<std::uint8_t> b, const std::optional<std::uint8_t> a, const std::optional<std::int16_t> ordering, const std::optional<std::uint16_t> visibleDistance, const std::optional<CElement*> visibleTo);
 
-    // Blip get functions
-    LUA_DECLARE(GetBlipIcon);
-    LUA_DECLARE(GetBlipSize);
-    LUA_DECLARE(GetBlipColor);
-    LUA_DECLARE(GetBlipOrdering);
-    LUA_DECLARE(GetBlipVisibleDistance);
+    // Get functions
+    static std::uint8_t                                                            GetBlipIcon(CBlip* const radarMarker) noexcept;
+    static std::uint8_t                                                            GetBlipSize(CBlip* const radarMarker) noexcept;
+    static CLuaMultiReturn<std::uint8_t, std::uint8_t, std::uint8_t, std::uint8_t> GetBlipColor(CBlip* const radarMarker) noexcept;
+    static std::int16_t                                                            GetBlipOrdering(CBlip* const radarMarker) noexcept;
+    static std::uint16_t                                                           GetBlipVisibleDistance(CBlip* const radarMarker) noexcept;
 
-    // Blip set functions
-    LUA_DECLARE(SetBlipIcon);
-    LUA_DECLARE(SetBlipSize);
-    LUA_DECLARE(SetBlipColor);
-    LUA_DECLARE(SetBlipOrdering);
-    LUA_DECLARE(SetBlipVisibleDistance);
+    // Set functions
+    static bool SetBlipIcon(CElement* const radarMarker, const std::uint8_t icon);
+    static bool SetBlipSize(lua_State* const luaVM, CElement* const radarMarker, std::uint8_t size) noexcept;
+    static bool SetBlipColor(CElement* const radarMarker, const std::uint8_t r, const std::uint8_t g, const std::uint8_t b, const std::uint8_t a) noexcept;
+    static bool SetBlipOrdering(CElement* const radarMarker, const std::int16_t ordering) noexcept;
+    static bool SetBlipVisibleDistance(CElement* const radarMarker, const std::uint16_t visibleDistance) noexcept;
 };
