@@ -29,6 +29,9 @@ public:
     static bool IsObjectBreakable(CObject* const pObject);
     static bool IsObjectMoving(CObject* const pObject);
     static bool IsObjectRespawnable(CObject* const pObject) noexcept;
+    LUA_DECLARE(GetObjectProperty);
+    LUA_DECLARE(GetObjectProperties);
+
 
     // Object set functions
     LUA_DECLARE(SetObjectName);
@@ -39,4 +42,5 @@ public:
     LUA_DECLARE(StopObject);
     static bool BreakObject(CObject* const pObject);
     static bool ToggleObjectRespawn(CObject* const pObject, const bool bRespawn) noexcept;
+    static bool SetObjectProperty(CObject* const pObject, const std::string sProperty, const std::variant<float, CVector> vValue);
 };
