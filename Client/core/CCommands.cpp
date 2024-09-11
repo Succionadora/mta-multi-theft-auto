@@ -84,12 +84,11 @@ bool CCommands::Execute(const char* szCommandLine)
 bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool bHandleRemotely, bool bIsScriptedBind)
 {
     // Copy szParametersIn so the contents can be changed
-    char* szParameters = NULL;
+    std::unique_ptr<char[]> szParameters = nullptr;
     if (szParametersIn)
     {
-        size_t sizeParameters = strlen(szParametersIn) + 1;
-        szParameters = static_cast<char*>(alloca(sizeParameters));
-        memcpy(szParameters, szParametersIn, sizeParameters);
+        szParameters = std::make_unique<char[]>(strlen(szParametersIn) + 1);
+        std::strcpy(szParameters.get(), szParametersIn);
     }
 
     // HACK: if its a 'chatboxsay' command, use the next parameter
@@ -99,23 +98,27 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
         if (szParameters)
         {
             // His line starts with '/'?
-            if (*szParameters == '/')
+            if (szParameters[0] == '/')
             {
                 // Copy the characters after the slash to the 0 terminator to a seperate buffer
-                char szBuffer[256];
-                strncpy(szBuffer, szParameters + 1, 256);
-                szBuffer[255] = 0;
+                std::array<char, 256> szBuffer = {};
+                strncpy(szBuffer.data(), szParameters.get() + 1, szBuffer.size() - 1);
+                szBuffer.back() = '\0';
 
                 // Split it into command and arguments
-                szCommand = strtok(szBuffer, " ");
-                szParameters = strtok(NULL, "\0");
-                if (szCommand == NULL)
-                {
+                szCommand = strtok(szBuffer.data(), " ");
+                if (!szCommand)
                     return false;
-                }
-                if (szParameters == NULL)
+
+                if (char* szNewParameters = strtok(nullptr, "\0"); szNewParameters)
                 {
-                    szParameters = "";
+                    szParameters = std::make_unique<char[]>(strlen(szNewParameters) + 1);
+                    std::strcpy(szParameters.get(), szNewParameters);
+                }
+                else
+                {
+                    szParameters = std::make_unique<char[]>(1);
+                    szParameters[0] = '\0';
                 }
             }
         }
@@ -133,14 +136,14 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
         {
             // Execute it
             if (!bIsScriptedBind || pEntry->bAllowScriptedBind)
-                ExecuteHandler(pEntry->pfnCmdFunc, szParameters);
-
+                ExecuteHandler(pEntry->pfnCmdFunc, szParameters.get());
+          
             wasHandled = true;
         }
     }
 
     // Recompose the original command text
-    std::string val = std::string(szCommand) + " " + std::string(szParameters ? szParameters : "");
+    std::string val = std::string(szCommand) + " " + std::string(szParameters ? szParameters.get() : "");
 
     // Is it a cvar? (syntax: cvar[ = value])
     if (!wasHandled)
@@ -193,13 +196,13 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
     bool bIsNickCommand = !stricmp(szCommand, "nick");
     if (!wasHandled && bIsNickCommand && szParameters && !bIsScriptedBind)
     {
-        if (CCore::GetSingleton().IsValidNick(szParameters))
+        if (CCore::GetSingleton().IsValidNick(szParameters.get()))
         {
-            CVARS_SET("nick", std::string(szParameters));
+            CVARS_SET("nick", std::string(szParameters.get()));
 
             if (!CCore::GetSingleton().IsConnected())
             {
-                CCore::GetSingleton().GetConsole()->Printf("nick: You are now known as %s", szParameters);
+                CCore::GetSingleton().GetConsole()->Printf("nick: You are now known as %s", szParameters.get());
             }
         }
         else if (!CCore::GetSingleton().IsConnected())
@@ -212,7 +215,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
     if (m_pfnExecuteHandler)
     {
         bool bAllowScriptedBind = (!pEntry || pEntry->bAllowScriptedBind);
-        if (m_pfnExecuteHandler(szCommand, szParameters, bHandleRemotely, wasHandled, bIsScriptedBind, bAllowScriptedBind))
+        if (m_pfnExecuteHandler(szCommand, szParameters.get(), bHandleRemotely, wasHandled, bIsScriptedBind, bAllowScriptedBind))
             return true;
     }
 
